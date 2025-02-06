@@ -1,0 +1,95 @@
+// rooms in socket io
+
+>> index.js--
+
+var roomno = 1;
+var full = 0;
+
+io.on("connection", (socket) => {
+  console.log("user connected");
+
+  socket.join("room" + roomno);
+
+  io.sockets
+    .in("room" + roomno)
+    .emit("connectedRoom", "You are connected to room no. " + roomno);
+
+  full++;
+  if (full >= 2) {
+    full = 0;
+    roomno++;
+  }
+
+  socket.on("disconnect", () => {
+    console.log("user disconnected");
+  });
+});
+
+>> index.html--
+
+ var socket = io();
+
+      socket.on("connectedRoom", (data) => {
+        document.body.innerHTML = "";
+        document.write(data);
+      });
+
+*****---------------------------------******
+
+// error handling in socket io
+
+>> index.html--
+1.
+var socket = io();
+socket.on('connect_failed,()=>{
+    alert('Your connection failed')
+})
+
+2.
+var socket = io();
+socket.on('reconnect_failed,()=>{
+    alert(' Reconnection failed')
+})
+
+3.
+var socket = io();
+socket.on('reconnecting,()=>{
+    alert('You reconnected ')
+})
+
+4.
+var socket = io();
+socket.on('error,()=>{
+    alert('something went wrong!')
+})
+
+**************--------------------****************
+
+>>index.js--
+
+var app = require("express")();
+var http = require("http").Server(app);
+
+var path = require("path");
+var io = require("socket.io")(http);
+app.get("/", (req, res) => {
+  var options = {
+    root: path.join(__dirname),
+  };
+  var fileName = "index.html";
+  res.sendFile(fileName, options);
+});
+
+
+io.on("connection", (socket) => {
+  console.log("user connected");
+
+
+  socket.on("disconnect", () => {
+    console.log("user disconnected");
+  });
+});
+
+http.listen(3000, () => {
+  console.log("server is running");
+});

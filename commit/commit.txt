@@ -1,0 +1,149 @@
+>> index.js--
+var app = require("express")();
+var http = require("http").Server(app);
+
+var path = require("path");
+var io = require("socket.io")(http);
+app.get("/", (req, res) => {
+  var options = {
+    root: path.join(__dirname),
+  };
+  var fileName = "index.html";
+  res.sendFile(fileName, options);
+});
+
+io.on("connection", (socket) => {
+  console.log("user connected");
+
+  //   setTimeout(() => {
+  //     // createing events
+
+  //     // socket.send("message sent from server");
+  //     socket.emit("myServerEvent", {
+  //       description: "a custom message from server !",
+  //     });
+  //   }, 3000);
+
+  //    catching event from client side
+  socket.on("myClientEvent", (data) => {
+    console.log("received data from client: ", data);
+  });
+
+  socket.on("disconnect", () => {
+    console.log("user disconnected");
+  });
+});
+
+http.listen(3000, () => {
+  console.log("server is running");
+});
+ 
+
+>> index.html--
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Socket</title>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.8.1/socket.io.js"
+      integrity="sha512-8BHxHDLsOHx+flIrQ0DrZcea7MkHqRU5GbTHmbdzMRnAaoCIkZ97PqZcXJkKZckMMhqfoeaJE+DNUVuyoQsO3Q=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    ></script>
+  </head>
+  <body>
+    <h1>Hello world</h1>
+    <script>
+      var socket = io();
+      // catching events from server side
+
+      // socket.on("message", (data) => {
+      //   document.write(data);
+      // });
+      // socket.on("myServerEvent", (data) => {
+      //   document.write(data.description);
+      // });
+
+      // sending events to server side
+      socket.emit("myClientEvent", {
+        description: "a custom message from client !",
+      });
+     
+    </script>
+  </body>
+</html>
+
+*****-------------------------------*****
+
+// Broadcast in socket io
+
+>> index.js--
+
+ var users = 0;
+
+io.on("connection", (socket) => {
+  console.log("user connected");
+  users++;
+  io.sockets.emit("broadcast", { message: users + " users connected" });
+
+  socket.on("disconnect", () => {
+    console.log("user disconnected");
+    users--;
+    io.sockets.emit("broadcast", { message: users + " users connected" });
+  });
+});
+
+index.html -- 
+
+ var socket = io();
+      socket.on("broadcast", (data) => {
+        document.body.innerHTML = "";
+        document.write(data.message);
+      });
+
+***------------------------------------***
+ 
+// Broadcast in socket io
+
+>> index.js--
+
+var users = 0;
+
+io.on("connection", (socket) => {
+  console.log("user connected");
+  users++;
+  socket.emit("newUserConnected", { message: "Welcome!" }); // for current user
+
+  socket.broadcast.emit("newUserConnected", {
+    message: users + " users connected",
+  }); // for those whom are already connected
+
+  socket.on("disconnect", () => {
+    console.log("user disconnected");
+    users--;
+    socket.broadcast.emit("newUserConnected", {
+      message: users + " users connected",
+    });
+  });
+});
+
+>> index.html--
+
+var socket = io();
+      socket.on("newUserConnected", (data) => {
+        document.body.innerHTML = "";
+        document.write(data.message);
+      });
+
+
+When to use which:
+
+Use io.sockets.emit :- when you want to send a message to everyone, including the sender (like a general announcement).
+
+Use socket.broadcast.emit :- when you want to send a message to everyone else except the sender (like a chat message that the sender doesn't need to see echoed back).
+
+****--------------------------------****
+
