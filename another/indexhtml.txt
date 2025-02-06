@@ -1,0 +1,112 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Chat App</title>
+  </head>
+  <body>
+    <h1>Chat App</h1>
+
+    <input type="text" id="usernameInput" placeholder="Enter your username" />
+    <button onclick="joinChat()">Join Chat</button>
+
+    <div id="chatArea" style="display: none">
+      <ul id="userList"></ul>
+      <br />
+
+      <div id="messageArea">
+        <ul id="messages"></ul>
+        <input type="text" id="messageInput" />
+        <button onclick="sendMessage()">Send</button>
+
+        <h3>Private Message:</h3>
+        <input type="text" id="privateRecipient" placeholder="Recipient" />
+        <input type="text" id="privateMessageInput" placeholder="Message" />
+        <button onclick="sendPrivateMessage()">Send Private</button>
+
+        <h3>Broadcast Message:</h3>
+        <input
+          type="text"
+          id="broadcastMessageInput"
+          placeholder="Broadcast Message"
+        />
+        <button onclick="sendBroadcastMessage()">Send Broadcast</button>
+      </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      const socket = io();
+      let username;
+
+      function joinChat() {
+        username = document.getElementById("usernameInput").value;
+        if (username.trim() !== "") {
+          socket.emit("join", username);
+          document.getElementById("usernameInput").style.display = "none";
+          document.getElementById("chatArea").style.display = "block";
+          document.getElementById(
+            "chatTitle"
+          ).textContent = `Chat App - ${username}`;
+        } else {
+          alert("Please enter a username.");
+        }
+      }
+
+      socket.on("userListUpdate", (userList) => {
+        const userListElement = document.getElementById("userList");
+        userListElement.innerHTML = ""; // Clear previous list
+        userList.forEach((user) => {
+          const li = document.createElement("li");
+          li.textContent = user;
+          userListElement.appendChild(li);
+        });
+      });
+
+      function sendMessage() {
+        const message = document.getElementById("messageInput").value;
+        if (message.trim() !== "") {
+          socket.emit("broadcast message", message); // Send to all
+          document.getElementById("messageInput").value = ""; // Clear input field
+        }
+      }
+
+      function sendPrivateMessage() {
+        const to = document.getElementById("privateRecipient").value;
+        const message = document.getElementById("privateMessageInput").value;
+        if (to.trim() !== "" && message.trim() !== "") {
+          socket.emit("private message", { to, message });
+          document.getElementById("privateMessageInput").value = "";
+        }
+      }
+
+      socket.on("private message", (data) => {
+        const { from, message } = data;
+        const messageList = document.getElementById("messages");
+        const li = document.createElement("li");
+        li.textContent = `Private from ${from}: ${message}`;
+        messageList.appendChild(li);
+      });
+
+      socket.on("private message error", (data) => {
+        alert(data.message);
+      });
+
+      function sendBroadcastMessage() {
+        const message = document.getElementById("broadcastMessageInput").value;
+        if (message.trim() !== "") {
+          socket.emit("broadcast message", message);
+          document.getElementById("broadcastMessageInput").value = "";
+        }
+      }
+
+      socket.on("broadcast message", (data) => {
+        const { from, message } = data;
+        const messageList = document.getElementById("messages");
+        const li = document.createElement("li");
+        li.textContent = `${from}: ${message}`;
+        messageList.appendChild(li);
+      });
+    </script>
+  </body>
+</html>

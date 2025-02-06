@@ -1,0 +1,56 @@
+
+const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
+
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
+
+app.get("/", (req, res) => {
+  res.sendFile(__dirname + "/index.html"); // Serve your HTML file
+});
+
+const users = {}; // Store connected users and their socket IDs
+
+io.on("connection", (socket) => {
+  console.log("A user connected");
+
+  socket.on("join", (username) => {
+    // User joins the chat
+    users[username] = socket.id; // Store username and socket ID
+    socket.username = username; // Add username to the socket object
+    console.log(`${username} joined`);
+    io.emit("userListUpdate", Object.keys(users)); // Update user list for all clients
+  });
+
+  socket.on("private message", (data) => {
+    // 1-to-1 message
+    const { to, message } = data;
+    const recipientSocketId = users[to];
+    if (recipientSocketId) {
+      io.to(recipientSocketId).emit("private message", {
+        from: socket.username,
+        message,
+      });
+    } else {
+      socket.emit("private message error", { message: `${to} is not online.` }); // Notify sender if recipient is offline.
+    }
+  });
+
+  socket.on("broadcast message", (message) => {
+    // 1-to-many message (to all)
+    io.emit("broadcast message", { from: socket.username, message });
+  });
+
+  socket.on("disconnect", () => {
+    console.log(`${socket.username} disconnected`);
+    delete users[socket.username]; // Remove user from the list
+    io.emit("userListUpdate", Object.keys(users)); // Update user list for all clients
+  });
+});
+
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+  console.log(`Listening on *:${PORT}`);
+});
